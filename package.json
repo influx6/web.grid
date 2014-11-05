@@ -1,0 +1,19 @@
+{
+  "name": "plugd",
+  "version": "0.0.3",
+  "description": "flux pattern based framework",
+  "main": "./plugd.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies":{
+    "stackq":"0.x.x"
+  },
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/influx6/plug"
+  },
+  "author": "Alexander Ewetumo",
+  "license": "mit"
+}
