@@ -29,8 +29,7 @@ stacks.JzGroup('plug channel specification', function (_){
           expects.isObject(f);
         }));
         c.emit({'name':'alex'});
-        console.log('call next');
-        next();
+        return next();
       });
 
       $.for(ch);

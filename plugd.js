@@ -85,7 +85,11 @@ ShellPacket.Reply = function(p){
  return ShellPacket(p);
 };
 
-var Channel = exports.Channel = stacks.Stream.extends({});
+var Channel = exports.Channel = stacks.Stream.extends({
+  init: function(){
+    this.$super();
+  }
+});
 
 var SelectedChannel = exports.SelectedChannel = Channel.extends({
   init: function(id,picker){
@@ -118,7 +122,7 @@ var ReplyChannel = exports.ReplyChannel = SelectedChannel.extends({
   }
 });
 
-var Adaptor = exports.Adaptor = core.Class({
+var Adaptor = exports.Adaptor = stacks.Class({
   init: function(fc){
     core.Asserted(core.valids.isFunction(fc),"argument must be a function!");
     var self = this;
@@ -180,7 +184,7 @@ var Adaptor = exports.Adaptor = core.Class({
   },
 });
 
-var FunctionStore = exports.FuncstionStore = stacks.Class({
+var FunctionStore = exports.FunctionStore = stacks.Class({
   init: function(id,generator){
     this.id = id || (stacks.util.guid()+'- store');
     this.registry = stacks.as.MapDecorator({});
@@ -212,7 +216,7 @@ var PlugStore = exports.PlugStore = FunctionStore.extends({
   }
 });
 
-var AdaptorStore = export.AdaptorStore = FuncstionStore.extends({
+var AdaptorStore = exports.AdaptorStore = FunctionStore.extends({
   init: function(id){
     this.$super(id,function(fn,sid){
       var apt = Adaptor.make(fn);
@@ -271,7 +275,7 @@ var AdapterWorkQueue = exports.AdapterWorkQueue = (function () {
 })();
 
 var PSMeta = { task: true, reply: true};
-var PackStream = export.PackStream = stacks.Class({
+var PackStream = exports.PackStream = stacks.Class({
   init: function(id,picker,mets){
     var meta = core.Util.extends({},PSMeta,mets);
     this.packets = Channel.make();
