@@ -1,18 +1,20 @@
 {
-  "name": "plugd",
+  "name": "web.plug",
   "version": "0.0.3",
-  "description": "flux pattern based framework",
-  "main": "./plugd.js",
+  "description": "http adaptors and plugs based on the plugd framework",
+  "main": "./http.plug.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies":{
-    "stackq":"0.x.x"
+    "stackq":"0.x.x",
+    "plugd": "0.x.x",
+    "express": ">=4.10.0"
   },
   "keywords": [],
   "repository": {
     "type": "git",
-    "url": "http://github.com/influx6/plug"
+    "url": "http://github.com/influx6/web.plug"
   },
   "author": "Alexander Ewetumo",
   "license": "mit"
