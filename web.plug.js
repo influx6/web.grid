@@ -83,7 +83,6 @@ excom.registerPlug('web.router',function(){
 });
 
 excom.registerPlug('web.request',function(){
-
   this.channels.tasks.on(this.$closure(function(p){
     return p.stream.$.all().on(this.$closure(function(f){
       if(f.data.gid && f.data.gid == webRequestID){
@@ -91,17 +90,21 @@ excom.registerPlug('web.request',function(){
       }
     }));
   }));
-
 });
 
 excom.registerCompose('web',function(){
 
   this.use('express.http.server','web.server','app');
-  this.use('express.web.router','http.server.request','router');
-  this.use('express.web.request','/','/');
+  this.use('express.web.router','http.server.request','app.router');
+  this.use('express.web.request','/','app.route./');
 
+  this.get('app.route./').attachPoint(function(q,sm){
+    q.stream.$.all().on(function(f){
+      f.req.res.writeHead(200);
+      return f.req.res.end('welcome to /');
+    });
+  },'get','home.get');
 
   this.createTask('web.router.route').push({url:'/'}).ok();
-
 
 });
