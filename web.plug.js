@@ -12,41 +12,37 @@ var http = require('http'),
     plug = require("plugd");
 
 var webRequestID = 0x32FFA5656;
-var excom = module.exports = plug.Composable.make('express');
+var excom = module.exports = plug.Composable.make('webplug');
 
 excom.registerPlug('http.server',function(){
   var server = http.createServer(this.$closure(function(req,res){
     req.res = res;
-    this.createTask('http.server.request').push(req).ok();
+    this.Task('http.server.request',req);
   }));
 
   server.on('error',function(e){
-    this.createTask('http.server.errors').push(e).ok();
+    this.Task('http.server.errors',{'e': e});
   });
 
   var done = false;
 
   this.channels.tasks.on(this.$closure(function(p){
-    return p.stream.$.all().on(this.$closure(function(i){
-      if(done) return;
-      if(!stacks.valids.isObject(i.data)) return;
-      if(stacks.valids.notExists(i.data.port)) return;
-      server.listen.call(server,i.data.port,i.data.address,i.data.fn);
-      this.config({'address': i.data.address, 'port': i.data.port});
+      if(done || stacks.valids.not.exists(p.body)) return;
+      var body = p.body, addr = body.addr, port = body.port, fn = body.fn;
+      if(stacks.valids.not.exists(port)) return;
+      server.listen.call(server,port,addr || '127.0.0.1',fn);
+      this.config({'address': addr, 'port': port});
       this.channels.tasks.lock();
       this.channels.tasks.flush();
       done = true;
-    }));
   }));
 
 });
 
 excom.registerPlug('http.request',function(){
   this.channels.tasks.on(this.$closure(function(p){
-    return p.stream.$.all().on(this.$closure(function(d){
-      this.createReply('http.request').push(d.data).ok();
-    }));
-  }));
+    this.Reply('http.request',p.body);
+  }))
 });
 
 excom.registerPlug('web.router',function(){
@@ -56,55 +52,58 @@ excom.registerPlug('web.router',function(){
   var rbind = this.channels.packets.stream(routes);
 
   var self = this;
+  px.on('404',function(c,m,p){
+    self.Task('404',{
+      'req': p,
+      'method':p.method.toLowerCase(),
+      'map':c,
+      'gid': webRequestID
+    });
+  });
+
   routes.on(function(p){
-    return p.stream.$.all().on(function(f){
-      if(!stacks.valids.isObject(f.data)) return;
-      if(!stacks.valids.exists(f.data.url)) return;
-      px.route(f.data.url,f.data.method,f.data.config);
-      px.on(f.data.url,function(c,m,p){
-        self.createTask(f.data.url).push({
+    var body = p.body, url = body.url, method = body.method,conf = body.config;
+      if(stacks.valids.not.exists(body) || stacks.valids.not.isString(url)) return;
+      px.route(url,method,conf);
+      px.on(url,function(c,m,p){
+        self.Task(url,{
           'req': p,
           'method':p.method.toLowerCase(),
           'map':c,
           'gid': webRequestID
-        }).ok();
+        });
       });
-    });
   });
 
   this.channels.tasks.on(this.$closure(function(p){
-    return p.stream.$.all().on(this.$closure(function(f){
-      if(f.data && f.data.res){
-        px.analyze(f.data.url,f.data.method,f.data);
-      }
-    }));
+    var req = p.body;
+    if(req && req.res){ px.analyze(req.url,req.method,req); }
   }));
 
 });
 
 excom.registerPlug('web.request',function(){
-  this.channels.tasks.on(this.$closure(function(p){
-    return p.stream.$.all().on(this.$closure(function(f){
-      if(f.data.gid && f.data.gid == webRequestID){
-        this.createReply(f.data.method).push(f.data).ok();
+  this.channels.tasks.on(this.$bind(function(p){
+    var body = p.body,req;
+      if(body.gid && body.gid == webRequestID){
+        var f = this.Reply(body.method,body);
+        f.secret = 'web.request.root';
       }
-    }));
   }));
 });
 
 excom.registerCompose('web',function(){
 
-  this.use('express.http.server','web.server','app');
-  this.use('express.web.router','http.server.request','app.router');
-  this.use('express.web.request','/','app.route./');
+  this.use('webplug.http.server','web.server','app');
+  this.use('webplug.web.router','http.server.request','app.router');
+  this.use('webplug.web.request','/*','app.route./*');
 
-  this.get('app.route./').attachPoint(function(q,sm){
-    q.stream.$.all().on(function(f){
-      f.req.res.writeHead(200);
-      return f.req.res.end('welcome to /');
-    });
-  },'get','home.get');
+  this.get('app.route./*').attachPoint(function(q,sm){
+    var req = q.body.req, res = req.res;
+      res.writeHead(200);
+      return res.end('welcome to /');
+  },null,'home.all');
 
-  this.createTask('web.router.route').push({url:'/'}).ok();
+  this.Task('web.router.route',{url:'/*'});
 
 });

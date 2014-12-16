@@ -7,24 +7,22 @@ var expects = stacks.Expects;
 
 stacks.Jazz('plate specification', function (_){
 
-  var net = express.createComposer('test.com').use('serv.com','express.web');
+  var net = express.createComposer('test.com').use('serv.com','webplug.web');
   var serv = net.get('serv.com');
 
-  var dts = serv.createTask('web.server')
-  .push({ port: 3000, address: '127.0.0.1'});
 
-  serv.get('app.route./').attachPoint(function(p,sm){
-    p.stream.$.one().on(this.bind(function(f){
+  serv.get('app.route./*').attachPoint(function(p,sm){
+    conole.log('point:',p);
       _('can i get a request from the server',function($){
         $.async(function(d,next,g){
           expects.truthy(d);
-          expects.truthy(d.res);
-          expects.truthy(d.url);
+          expects.truthy(d.body);
+          expects.truthy(d.body.res);
+          expects.truthy(d.body.url);
           next();
         });
-        $.for(f);
+        $.for(p);
       });
-    }));
   },'http.request');
 
   _('can i get a added plug from the compose stack',function($){
@@ -39,15 +37,12 @@ stacks.Jazz('plate specification', function (_){
   _('can i send server config as tasks?',function($){
 
     $.async(function(d,next,g){
-      d.on(g(function(k){
-        expects.truthy(k);
-        expects.truthy(plug.Packets.isPacket(k));
-        stacks.funcs.doIn(process.exit,300)
-      }));
       next();
-      d.ok();
+      expects.truthy(d);
+      expects.truthy(plug.Packets.isPacket(d));
+      // stacks.funcs.doIn(process.exit,300)
     });
-    $.for(dts);
+    $.for(serv.Task('web.server',{ port: 3000, address: '127.0.0.1'}));
   });
 
 });
