@@ -2,15 +2,14 @@
   "name": "web.plug",
   "version": "0.0.4",
   "description": "http adaptors and plugs based on the plugd framework",
-  "main": "./http.plug.js",
+  "main": "./web.plug.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies":{
     "stackq":"0.x.x",
     "plugd": "0.x.x",
-    "resourcedjs":"0.x.x",
-    "express": ">=4.10.0"
+    "resourcedjs":"0.x.x"
   },
   "keywords": [],
   "repository": {

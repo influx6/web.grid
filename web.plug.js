@@ -12,7 +12,7 @@ var http = require('http'),
     plug = require("plugd");
 
 var webRequestID = 0x32FFA5656;
-var excom = module.exports = plug.Composable.make('webplug');
+var excom = module.exports = plug.Rack.make('web.plug');
 
 excom.registerPlug('http.server',function(){
   var server = http.createServer(this.$closure(function(req,res){
@@ -26,21 +26,21 @@ excom.registerPlug('http.server',function(){
 
   var done = false;
 
-  this.channels.tasks.on(this.$closure(function(p){
+  this.tasks().on(this.$closure(function(p){
       if(done || stacks.valids.not.exists(p.body)) return;
       var body = p.body, addr = body.addr, port = body.port, fn = body.fn;
       if(stacks.valids.not.exists(port)) return;
       server.listen.call(server,port,addr || '127.0.0.1',fn);
       this.config({'address': addr, 'port': port});
-      this.channels.tasks.lock();
-      this.channels.tasks.flush();
+      this.tasks().lock();
+      this.tasks().flush();
       done = true;
   }));
 
 });
 
 excom.registerPlug('http.request',function(){
-  this.channels.tasks.on(this.$closure(function(p){
+  this.tasks().on(this.$closure(function(p){
     this.Reply('http.request',p.body);
   }))
 });
@@ -48,8 +48,8 @@ excom.registerPlug('http.request',function(){
 excom.registerPlug('web.router',function(){
   var px = mx.Router.make();
 
-  var routes = plug.TaskChannel.make('web.router.route');
-  var rbind = this.channels.packets.stream(routes);
+  var routes = this.newTaskChannel('routes','web.router.route');
+  var rbind = this.channel.stream(routes);
 
   var self = this;
   px.on('404',function(c,m,p){
@@ -75,7 +75,7 @@ excom.registerPlug('web.router',function(){
       });
   });
 
-  this.channels.tasks.on(this.$closure(function(p){
+  this.tasks().on(this.$closure(function(p){
     var req = p.body;
     if(req && req.res){ px.analyze(req.url,req.method,req); }
   }));
@@ -83,8 +83,8 @@ excom.registerPlug('web.router',function(){
 });
 
 excom.registerPlug('web.request',function(){
-  this.channels.tasks.on(this.$bind(function(p){
-    var body = p.body,req;
+  this.tasks().on(this.$bind(function(p){
+    var body = p.body;
       if(body.gid && body.gid == webRequestID){
         var f = this.Reply(body.method,body);
         f.secret = 'web.request.root';
@@ -92,16 +92,18 @@ excom.registerPlug('web.request',function(){
   }));
 });
 
-excom.registerCompose('web',function(){
+excom.registerCompose('web.basic',function(){
 
-  this.use('webplug.http.server','web.server','app');
-  this.use('webplug.web.router','http.server.request','app.router');
-  this.use('webplug.web.request','/*','app.route./*');
+  this.use(excom.Plug('http.server','web.server'),'app');
+  this.use(excom.Plug('web.router','http.server.request'),'app.router');
+  this.use(excom.Plug('web.request','/*'),'app.route./*');
+  this.use(excom.Plug('web.request','404'),'app.route.404');
+
 
   this.get('app.route./*').attachPoint(function(q,sm){
     var req = q.body.req, res = req.res;
       res.writeHead(200);
-      return res.end('welcome to /');
+      return res.end('welcome to /\n');
   },null,'home.all');
 
   this.Task('web.router.route',{url:'/*'});
