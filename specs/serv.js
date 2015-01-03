@@ -7,14 +7,56 @@ var expects = stacks.Expects;
 
 stacks.Jazz('plate specification', function (_){
 
-  var net = plug.Network.make('test.com');
-  net.crate(web);
-  net.use('web.plug/compose/web.basic','serv.com');
+  var webr = web.ioBasic;
+  webr.use(web.Plug('web.resource','http.webrer.request'),'webr');
 
-  var serv = net.get('serv.com');
+  webr.Task('web.resource.new',{ model: 'admins', conf:{
+    has: 'comments', 'params': {
+      'id':'digits'
+    }
+  }});
 
-  serv.get('app.route./*').attachPoint(function(p,sm){
-      _('can i get a request from the server',function($){
+  webr.Task('web.resource.update',{ model: 'admins', map:{
+    find: function(map,pay,method){
+      _('can i get a find request',function($){
+        $.sync(function(d,g){
+          expects.truthy(map);
+          expects.isObject(map);
+          expects.truthy(payload.res);
+        });
+      }).use(true);
+    },
+    findOne: function(map,payload,method){
+      _('can i get a findOne request',function($){
+        $.sync(function(d,g){
+          expects.truthy(map);
+          expects.isObject(map);
+          expects.truthy(payload.res);
+        });
+      }).use(true);
+    },
+    create: function(map,payload,method){
+      _('can i get a create request',function($){
+        $.sync(function(d,g){
+          expects.truthy(map);
+          expects.isObject(map);
+          expects.truthy(payload);
+        });
+      }).use(true);
+    },
+    proxyComments: function(map,payload,method){
+      _('can i get a /admins/comments request',function($){
+        $.sync(function(d,g){
+          expects.truthy(map);
+          expects.isObject(map);
+          expects.truthy(payload);
+        });
+      }).use(true);
+    }
+  }});
+
+  webr.get('app.route./*').attachPoint(function(p,sm){
+      _('can i get a request from the webrer',function($){
         $.async(function(d,next,g){
           next();
           expects.truthy(d);
@@ -30,18 +72,18 @@ stacks.Jazz('plate specification', function (_){
       expects.truthy(plug.Plug.isInstance(d));
       next();
     });
-    $.for(serv.get('app'));
+    $.for(webr.get('app'));
   });
 
-  _('can i send server config as tasks?',function($){
+  _('can i send webrer config as tasks?',function($){
 
     $.async(function(d,next,g){
       next();
       expects.truthy(d);
       expects.truthy(plug.Packets.isPacket(d));
-      stacks.funcs.doIn(process.exit,3000)
+      stacks.funcs.doIn(process.exit,3000);
     });
-    $.for(serv.Task('web.server',{ port: 3000, address: '127.0.0.1'}));
+    $.for(webr.Task('io.server',{ port: 3000, address: '127.0.0.1'}));
   });
 
 });
