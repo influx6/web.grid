@@ -8,7 +8,7 @@ var expects = stacks.Expects;
 stacks.Jazz('plate specification', function (_){
 
   var webr = web.ioBasic;
-  webr.use(web.Plug('web.resource','http.webrer.request'),'webr');
+  webr.use(web.Plug('web.resource','http.server.request'),'webr');
 
   webr.Task('web.resource.new',{ model: 'admins', conf:{
     has: 'comments', 'params': {
@@ -17,12 +17,12 @@ stacks.Jazz('plate specification', function (_){
   }});
 
   webr.Task('web.resource.update',{ model: 'admins', map:{
-    find: function(map,pay,method){
+    find: function(map,payload,method){
       _('can i get a find request',function($){
         $.sync(function(d,g){
           expects.truthy(map);
           expects.isObject(map);
-          expects.truthy(payload.res);
+          expects.truthy(payload);
         });
       }).use(true);
     },
@@ -31,7 +31,7 @@ stacks.Jazz('plate specification', function (_){
         $.sync(function(d,g){
           expects.truthy(map);
           expects.isObject(map);
-          expects.truthy(payload.res);
+          expects.truthy(payload);
         });
       }).use(true);
     },

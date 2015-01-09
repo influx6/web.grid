@@ -230,17 +230,24 @@ excom.registerPlugPoint('web.console',function(q,sm){
   var head = stacks.Util.String(' ','[WebRequest]'.red,'Method:'.grey,req.method.green,','.grey);
   var body = stacks.Util.String(' ','Url:'.grey,req.url.green);
   console.log(head,body);
-})
+});
+
+excom.ioConsole = plug.Network.make('io.Console',function(){
+  this.use(excom.Plug('http.request','http.server.request'),'io.req');
+  this.get('io.req').attachPoint(excom.PlugPoint('web.console'),null,'console');
+});
+
+excom.registerPlug('web.console',function(){
+  this.attachNetwork(excom.ioConsole);
+});
 
 excom.ioBasic = plug.Network.make('io.basic',function(){
 
   this.use(excom.Plug('http.server','io.server'),'app');
-  this.use(excom.Plug('http.request','http.server.request'),'app.console');
+  this.use(excom.Plug('web.console','http.server.request'),'app.console');
   this.use(excom.Plug('web.router','http.server.request'),'app.router');
   this.use(excom.Plug('web.request','/*'),'app.route./*');
   this.use(excom.Plug('web.request','404'),'app.route.404');
-
-  this.get('app.console').attachPoint(excom.PlugPoint('web.console'),null,'web.console');
 
   this.get('app.route./*').attachPoint(function(q,sm){
     var req = q.body.req, res = req.res;
