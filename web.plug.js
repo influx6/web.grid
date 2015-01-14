@@ -8,6 +8,7 @@ var http = require('http'),
     engineio = require('engine.io'),
     stacks = require("stackq"),
     resq = require('resourcedjs'),
+    fs = require('fs.plug'),
     plug = require("plugd");
 
 var webRequestID = 0x32FFA5656;
@@ -16,13 +17,13 @@ var excom = module.exports = plug.Rack.make('web.plug');
 excom.registerPlug('http.server',function(){
   var server = http.createServer(this.$closure(function(req,res){
     req.res = res;
-    var p = this.Task('http.server.request',req);
-    req.on('data',p.emit);
-    req.on('end',p.end);
+    var p = this.Task.make('http.server.request',req);
+    req.on('data',p.$emit);
+    req.on('end',p.$end);
   }));
 
   server.on('error',function(e){
-    this.Task('http.server.errors',{'e': e});
+    this.Task.make('http.server.errors',{'e': e});
   });
 
   var done = false;
@@ -35,6 +36,7 @@ excom.registerPlug('http.server',function(){
       this.config({'address': addr, 'port': port});
       this.tasks().lock();
       this.tasks().flush();
+      p.lock();
       done = true;
   }));
 
@@ -45,12 +47,12 @@ excom.registerPlug('engineio.server',function(){
   var server,hs = http.createServer(this.$closure(function(req,res){
     req.res = res;
     if(req.url.substring(1,3) !== by){
-      this.Task('http.server.request',req);
+      this.Task.make('engineio.server.request',req);
     }
   }));
 
   hs.on('error',function(e){
-    this.Task('http.server.errors',{'e': e});
+    this.Task.make('engineio.server.errors',{'e': e});
   });
 
   this.pub('io.Up');
@@ -58,7 +60,7 @@ excom.registerPlug('engineio.server',function(){
     server = engineio.attach(hs,this.getConfigAttr('ops'));
     self.config({ httpServer: hs, ioServer: server });
     server.on('connection',function(socket){
-      socket.send('yay!');
+      this.Task.make('enineio.socket.request',socket);
     });
   }));
 
@@ -72,6 +74,7 @@ excom.registerPlug('engineio.server',function(){
       this.config({'address': addr, 'port': port, by: by, ops: body.ops });
       this.tasks().lock();
       this.tasks().flush();
+      p.lock();
       this.emit('io.Up',this);
       done = true;
   }));
@@ -81,7 +84,7 @@ excom.registerPlug('engineio.server',function(){
 
 excom.registerPlug('http.request',function(){
   this.tasks().on(this.$closure(function(p){
-    var f = this.Reply('http.request',p.body);
+    var f = this.Reply.make('http.request',p.body);
     p.link(f);
   }));
 });
@@ -89,12 +92,12 @@ excom.registerPlug('http.request',function(){
 excom.registerPlug('web.router',function(){
   var px = mx.Router.make();
 
-  var routes = this.newTaskChannel('route','web.router.route');
-  var unroutes = this.newTaskChannel('unroute','web.router.unroute');
+  var routes = this.newTask('route','web.router.route');
+  var unroutes = this.newTask('unroute','web.router.unroute');
 
   var self = this;
   px.on('404',function(c,m,p){
-    var t = self.Task('404',{
+    var t = self.Task.make('404',{
       'req': p,
       'method':p.method.toLowerCase(),
       'map':c,
@@ -111,7 +114,7 @@ excom.registerPlug('web.router',function(){
       if(stacks.valids.not.exists(body) || stacks.valids.not.isString(url)) return;
       px.route(url,method,conf);
       px.on(url,function(c,m,p){
-        var t = self.Task(url,{
+        var t = self.Task.make(url,{
           'req': p,
           'method':p.method.toLowerCase(),
           'map':c,
@@ -141,17 +144,18 @@ excom.registerPlug('web.router',function(){
 });
 
 excom.registerPlug('web.request',function(){
+
   this.tasks().on(this.$bind(function(p){
     var body = p.body;
       if(body.gid && body.gid == webRequestID){
-        var f = this.Reply(body.method,body);
+        var f = this.Reply.make(body.method,body);
         p.copy(f);
         f.secret = 'web.request.root';
       }
   }));
 
   this.on('close',this.$bind(function(){
-    this.Task('web.router.unroute',{ url: this.id });
+    this.Task.make('web.router.unroute',{ url: this.id });
   }));
 });
 
@@ -164,7 +168,7 @@ excom.registerMutator('checkAndFixUrl',function(d,next,end){
   return next(d);
 });
 
-excom.registerPlug('web.resource',function(){
+excom.registerPlug('web.resources',function(){
   this.config({
     resources: stacks.Storage.make('web.resources.processor'),
     router: mx.Router.make()
@@ -173,10 +177,10 @@ excom.registerPlug('web.resource',function(){
   var resd = this.getConfigAttr('resources');
   var rt = this.getConfigAttr('router');
 
-  this.newTaskChannel('res.new','web.resource.new');
-  this.newTaskChannel('res.rm','web.resource.remove');
-  this.newTaskChannel('res.upd','web.resource.update');
-  this.newTaskChannel('res.upc','web.resource.custom');
+  this.newTask('res.new','web.resources.new');
+  this.newTask('res.rm','web.resources.remove');
+  this.newTask('res.upd','web.resources.update');
+  this.newTask('res.upc','web.resources.custom');
 
   excom.Mutator('checkAndFixUrl').bind(this.tasks('res.new'));
   excom.Mutator('checkAndFixUrl').bind(this.tasks('res.rm'));
@@ -241,7 +245,7 @@ excom.registerPlug('web.console',function(){
   this.attachNetwork(excom.ioConsole);
 });
 
-excom.ioBasic = plug.Network.make('io.basic',function(){
+excom.ioBasic = plug.Network.blueprint(function(){
 
   this.use(excom.Plug('http.server','io.server'),'app');
   this.use(excom.Plug('web.console','http.server.request'),'app.console');
@@ -261,6 +265,73 @@ excom.ioBasic = plug.Network.make('io.basic',function(){
       return res.end('Sorry 404 to '+req.url+'\n');
   },null,'home.404');
 
-  this.Task('web.router.route',{url:'/*'});
+  this.Task.make('web.router.route',{url:'/*'});
+
+});
+
+excom.registerPlug('web.resource',function(){
+  if(!this.hasConfigAttr('model')) this.config({ model: 'model'});
+  this.config({ resource: resq.make(this.getConfigAttr('model')) });
+
+  var resd = this.getConfigAttr('resource');
+
+  this.newTask('res.use','web.resource.use');
+  this.newTask('res.custom','web.resource.custom');
+
+  this.tasks('res.use').on(this.$bind(function(p){
+    var b = p.body, model = b.model, map = b.map;
+    if(stacks.valids.not.Object(map)) return;
+    return resd.use(map);
+  }));
+
+  this.tasks('res.custom').on(this.$bind(function(p){
+    var b = p.body, model = b.model, map = b.map;
+    if(stacks.valids.not.Object(map)) return;
+    return resd.useCustom(map);
+  }));
+
+  this.tasks().on(this.$bind(function(p){
+    //we handle the resource request coming in here
+    var body = p.body, url = body.url, method = body.method;
+    if(stacks.valids.not.exists(url)) return;
+    rt.request(url,method,p);
+  }));
+
+
+});
+
+excom.ioFlat = plug.Network.blueprint(function(){
+
+  this.use(excom.Plug('http.server','io.server'),'app');
+  this.use(excom.Plug('web.console','http.server.request'),'app.console');
+  this.use(excom.Plug('web.router','http.server.request'),'app.router');
+  this.use(excom.Plug('web.request','404'),'app.route.404');
+
+  this.get('app.route.404').attachPoint(function(q,sm){
+    var req = q.body.req, res = req.res;
+    var words = stacks.Util.String(' ','Http Request:',req.url,"404'ed!");
+    res.writeHead(404,{'Content-Type':'text/plain'});
+    return res.end(words);
+  },null,'home.404');
+
+
+});
+
+excom.registerPlug('web.ioServ',function(){
+
+});
+
+excom.ioStatic = plug.Network.blueprint(function(){
+
+  this.use(fs.Plug('fs.ioControl'),'io.controller');
+  this.use(excom.Plug('web.request','/static'),'io.request');
+
+  this.get('io.request').attachPoint(function(p){
+
+  },'web.request');
+  
+});
+
+excom.registerPlug('web.staticFiles',function(){
 
 });

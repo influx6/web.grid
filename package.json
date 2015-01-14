@@ -9,7 +9,9 @@
   "dependencies":{
     "stackq":"0.x.x",
     "plugd": "0.x.x",
-    "resourcedjs":"0.x.x"
+    "resourcedjs":"0.x.x",
+    "engineio":">=1.3.1",
+    "fs.plug":">=0.0.2"
   },
   "keywords": [],
   "repository": {
