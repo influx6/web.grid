@@ -329,7 +329,7 @@ excom.ioStatic = plug.Network.blueprint(function(){
   this.get('io.request').attachPoint(function(p){
 
   },'web.request');
-  
+
 });
 
 excom.registerPlug('web.staticFiles',function(){
