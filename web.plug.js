@@ -301,37 +301,86 @@ excom.registerPlug('web.resource',function(){
 });
 
 excom.ioFlat = plug.Network.blueprint(function(){
-
   this.use(excom.Plug('http.server','io.server'),'app');
   this.use(excom.Plug('web.console','http.server.request'),'app.console');
   this.use(excom.Plug('web.router','http.server.request'),'app.router');
   this.use(excom.Plug('web.request','404'),'app.route.404');
-
   this.get('app.route.404').attachPoint(function(q,sm){
     var req = q.body.req, res = req.res;
     var words = stacks.Util.String(' ','Http Request:',req.url,"404'ed!");
     res.writeHead(404,{'Content-Type':'text/plain'});
     return res.end(words);
   },null,'home.404');
+});
 
 
+excom.ioStatic = plug.Network.blueprint(function(){
+  this.use(excom.Plug('web.request','/static'),'io.request');
+  this.use(fs.Plug('io.iodirect'),'io.direct');
 });
 
 excom.registerPlug('web.ioServ',function(){
+  var wfs = excom.ioStatic('web.fs.ioServ'),
+    reqcode = stacks.Util.guid(),
+    methods = ['get','post','patch','delete','head'];
 
-});
+  this.attachNetwork(wfs);
+  this.networkOut(this.replies());
 
-excom.ioStatic = plug.Network.blueprint(function(){
+  this.newTask('conf',this.makeName('conf'));
+  this.newSrcReply('ior',reqcode);
 
-  this.use(fs.Plug('fs.ioControl'),'io.controller');
-  this.use(excom.Plug('web.request','/static'),'io.request');
+  this.replies('ior').on(this.$bind(function(q){
+    console.log('request received!',q.message,q.body,q.peekConfig());
+  }));
 
-  this.get('io.request').attachPoint(function(p){
+  this.tasks('conf').on(this.$bind(function(q){
+    wfs.Task.clone(q,'io.iodirect.conf');
+  }));
 
-  },'web.request');
+  this.tasks().on(this.$bind(function(q){
+    console.log('cloning to /static');
+    wfs.Task.clone(q,'/static');
+  }));
 
-});
+  this.exposeNetwork().$bind(function(){
 
-excom.registerPlug('web.staticFiles',function(){
+    this.get('io.request').attachPoint(this.$bind(function(p){
+      var f = this.Task.clone(p,'io.iodirect.profile',{ file: p.body.url },reqcode);
+      f.config({ req: p.body });
+    }),'head','web.head');
+
+    this.get('io.request').attachPoint(this.$bind(function(p){
+      console.log('getting request!');
+      var f = this.Task.clone(p,'io.iodirect.read',{ file: p.body.url },reqcode);
+      f.config({ req: p.body });
+    }),'get','web.get');
+
+    this.get('io.request').attachPoint(this.$bind(function(p){
+      var f = this.Task.clone(p,'io.iodirect.write',{ file: p.body.url },reqcode);
+      f.config({ req: p.body });
+    }),'post','web.post');
+
+    this.get('io.request').attachPoint(this.$bind(function(p){
+      var f = this.Task.clone(p,'io.iodirect.remove',{ file: p.body.url },reqcode);
+      f.config({ req: p.body });
+    }),'delete','web.delete');
+
+    this.get('io.request').attachPoint(this.$bind(function(p){
+      var f = this.Task.clone(p,'io.iodirect.append',{ file: p.body.url },reqcode);
+      f.config({ req: p.body });
+    }),'patch','web.patch');
+
+    this.get('io.request').attachPoint(this.$bind(function(p){
+      if(stacks.valids.not.contains(p.body,'req')) return;
+      var body = p.body, req = body.req, res = req.res;
+      var mesg = stacks.Util.String(' ','REQUEST METHOD',stacks.funcs.doubleQuote(req.method),'NOT IMPLEMENTED!');
+      if(methods.indexOf(req.method.toLowerCase()) === -1){
+        res.writeHead(504); res.end(mesg);
+      }
+    }),null,'web.track');
+
+  });
+
 
 });
