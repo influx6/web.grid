@@ -148,7 +148,7 @@ excom.registerPlug('web.request',function(){
   this.tasks().on(this.$bind(function(p){
     var body = p.body;
       if(body.gid && body.gid == webRequestID){
-        var f = this.Reply.from(p,null,null,body.method);
+        var f = this.Reply.from(p,body.method);
         f.config({ secret: 'web.request.root'});
         // f.secret = 'web.request.root';
       }
@@ -312,7 +312,6 @@ excom.ioFlat = plug.Network.blueprint(function(){
     return res.end(words);
   },null,'home.404');
 });
-
 
 excom.ioStatic = plug.Network.blueprint(function(){
   this.use(excom.Plug('web.request','/static'),'io.request');
