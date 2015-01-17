@@ -317,15 +317,6 @@ excom.ioFlat = plug.Network.blueprint(function(){
 excom.ioStatic = plug.Network.blueprint(function(){
   this.use(excom.Plug('web.request','/static'),'io.request');
   this.use(fs.Plug('io.iodirect'),'io.direct');
-
-  this.get('io.direct').tasks('conf').on(function(p){
-    console.log('seeting conf',p.message,p.body);
-  });
-
-  this.tasks().on(function(p){
-    console.log('getting:',p.message);
-  });
-
 });
 
 excom.registerPlug('web.ioServ',function(){
