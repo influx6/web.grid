@@ -60,7 +60,7 @@ excom.registerPlug('engineio.server',function(){
     server = engineio.attach(hs,this.getConfigAttr('ops'));
     self.config({ httpServer: hs, ioServer: server });
     server.on('connection',function(socket){
-      this.Task.make('enineio.socket.request',socket);
+      this.Task.make('engineio.socket.request',socket);
     });
   }));
 
@@ -341,7 +341,7 @@ excom.registerPlug('web.ioServ',function(){
 
   this.replies('ior').on(this.$bind(function(q){
     console.log('request received!',q.message,q.body,q.peekConfig());
-    
+
   }));
 
   this.tasks('conf').on(this.$bind(function(q){
