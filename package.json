@@ -1,17 +1,17 @@
 {
-  "name": "web.plug",
+  "name": "web.grid",
   "version": "0.0.4",
   "description": "http adaptors and plugs based on the plugd framework",
-  "main": "./web.plug.js",
+  "main": "./web.grid.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies":{
     "stackq":"0.x.x",
-    "plugd": "0.x.x",
+    "grids": "0.x.x",
     "resourcedjs":"0.x.x",
     "engineio":">=1.3.1",
-    "fs.plug":">=0.0.2"
+    "fs.grid":">=0.0.2"
   },
   "keywords": [],
   "repository": {
